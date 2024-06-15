@@ -74,7 +74,7 @@ func SendNewSignalEMail(to string, userName string, symbol string, time string, 
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	TEMP_SIGNAL_ID := os.Getenv("TEMP_WELCOME_ID")
+	TEMP_SIGNAL_ID := os.Getenv("TEMP_SIGNAL_ID")
 	sendName := os.Getenv("SENDER_NAME")
 	sendEmail := os.Getenv("SENDER_EMAIL")
 	sigPara := map[string]interface{}{
