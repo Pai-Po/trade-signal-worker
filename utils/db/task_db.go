@@ -56,22 +56,6 @@ func NewPostgresTaskDB(connStr string) *PostgresTaskDB {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 
-	_, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS tasks (
-            id serial PRIMARY KEY, 
-            user_id varchar,
-            stock varchar,
-            kline_type varchar,
-            buy_strategy varchar,
-            sell_strategy varchar,
-            status varchar,
-            timestamp timestamp default current_timestamp
-        );
-    `)
-	if err != nil {
-		log.Fatalf("Failed to create task table: %v", err)
-	}
-
 	return &PostgresTaskDB{db: db}
 }
 
