@@ -13,6 +13,7 @@ type Task struct {
 	ID           int
 	UserID       string
 	Stock        string
+	Market       string
 	KlineType    string
 	BuyStrategy  string
 	SellStrategy string
@@ -21,7 +22,7 @@ type Task struct {
 }
 
 type TaskDB interface {
-	InsertTask(userID string, stock string, klineType string, buyStrategy string, sellStrategy string, status string) (Task, error)
+	InsertTask(userID string, stock string, market string, klineType string, buyStrategy string, sellStrategy string, status string) (Task, error)
 	GetAllTasks() ([]Task, error)
 	GetTaskByID(userID string, taskID int) (Task, error)
 	GetTaskByTaskID(taskID int) (Task, error)
@@ -59,19 +60,20 @@ func NewPostgresTaskDB(connStr string) *PostgresTaskDB {
 	return &PostgresTaskDB{db: db}
 }
 
-func (db *PostgresTaskDB) InsertTask(userID string, stock string, klineType string, buyStrategy string, sellStrategy string, status string) (Task, error) {
-	_, err := db.db.Exec(`
-        INSERT INTO tasks (user_id, stock, kline_type, buy_strategy, sell_strategy, status) 
-        VALUES ($1, $2, $3, $4, $5, $6)
+func (db *PostgresTaskDB) InsertTask(userID string, stock string, market string, klineType string, buyStrategy string, sellStrategy string, status string) (Task, error) {
+	var taskID int
+	err := db.db.QueryRow(`
+        INSERT INTO tasks (user_id, stock, market, kline_type, buy_strategy, sell_strategy, status) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
-    `, userID, stock, klineType, buyStrategy, sellStrategy, status)
+    `, userID, stock, market, klineType, buyStrategy, sellStrategy, status).Scan(&taskID)
 	if err != nil {
 		log.Printf("Failed to insert task: %v", err)
 		return Task{}, err
 	}
 
 	var task Task
-	err = db.db.QueryRow("SELECT * FROM tasks WHERE id = (SELECT MAX(id) FROM tasks);").Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+	err = db.db.QueryRow("SELECT * FROM tasks WHERE id = $1;", taskID).Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 	if err != nil {
 		log.Printf("Failed to fetch inserted task: %v", err)
 		return Task{}, err
@@ -91,7 +93,7 @@ func (db *PostgresTaskDB) GetAllTasks() ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var task Task
-		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 		if err != nil {
 			log.Printf("Failed to scan task: %v", err)
 			return nil, err
@@ -106,7 +108,7 @@ func (db *PostgresTaskDB) GetTaskByID(userID string, taskID int) (Task, error) {
 	row := db.db.QueryRow("SELECT * FROM tasks WHERE user_id = $1 AND id = $2;", userID, taskID)
 
 	var task Task
-	err := row.Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+	err := row.Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 	if err != nil {
 		log.Printf("Failed to fetch task: %v", err)
 		return Task{}, err
@@ -119,7 +121,7 @@ func (db *PostgresTaskDB) GetTaskByTaskID(taskID int) (Task, error) {
 	row := db.db.QueryRow("SELECT * FROM tasks WHERE id = $1;", taskID)
 
 	var task Task
-	err := row.Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+	err := row.Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 	if err != nil {
 		log.Printf("Failed to fetch task: %v", err)
 		return Task{}, err
@@ -139,7 +141,7 @@ func (db *PostgresTaskDB) GetTasksByUserID(userID string) ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var task Task
-		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 		if err != nil {
 			log.Printf("Failed to scan task: %v", err)
 			return nil, err
@@ -161,7 +163,7 @@ func (db *PostgresTaskDB) GetAllRunningTasks() ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var task Task
-		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
+		err := rows.Scan(&task.ID, &task.UserID, &task.Stock, &task.Market, &task.KlineType, &task.BuyStrategy, &task.SellStrategy, &task.Status, &task.Timestamp)
 		if err != nil {
 			log.Printf("Failed to scan task: %v", err)
 			return nil, err
